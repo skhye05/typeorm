@@ -1,25 +1,24 @@
-import { EntityMetadata } from "../metadata/EntityMetadata"
-import { ColumnMetadata } from "../metadata/ColumnMetadata"
-import { IndexMetadata } from "../metadata/IndexMetadata"
-import { RelationMetadata } from "../metadata/RelationMetadata"
-import { EmbeddedMetadata } from "../metadata/EmbeddedMetadata"
-import { MetadataArgsStorage } from "../metadata-args/MetadataArgsStorage"
-import { EmbeddedMetadataArgs } from "../metadata-args/EmbeddedMetadataArgs"
-import { RelationIdMetadata } from "../metadata/RelationIdMetadata"
-import { RelationCountMetadata } from "../metadata/RelationCountMetadata"
-import { EventListenerTypes } from "../metadata/types/EventListenerTypes"
-import { MetadataUtils } from "./MetadataUtils"
-import { TableMetadataArgs } from "../metadata-args/TableMetadataArgs"
-import { JunctionEntityMetadataBuilder } from "./JunctionEntityMetadataBuilder"
-import { ClosureJunctionEntityMetadataBuilder } from "./ClosureJunctionEntityMetadataBuilder"
-import { RelationJoinColumnBuilder } from "./RelationJoinColumnBuilder"
 import { DataSource } from "../data-source/DataSource"
-import { EntityListenerMetadata } from "../metadata/EntityListenerMetadata"
-import { UniqueMetadata } from "../metadata/UniqueMetadata"
-import { CheckMetadata } from "../metadata/CheckMetadata"
-import { ExclusionMetadata } from "../metadata/ExclusionMetadata"
 import { TypeORMError } from "../error"
-import { DriverUtils } from "../driver/DriverUtils"
+import { EmbeddedMetadataArgs } from "../metadata-args/EmbeddedMetadataArgs"
+import { MetadataArgsStorage } from "../metadata-args/MetadataArgsStorage"
+import { TableMetadataArgs } from "../metadata-args/TableMetadataArgs"
+import { CheckMetadata } from "../metadata/CheckMetadata"
+import { ColumnMetadata } from "../metadata/ColumnMetadata"
+import { EmbeddedMetadata } from "../metadata/EmbeddedMetadata"
+import { EntityListenerMetadata } from "../metadata/EntityListenerMetadata"
+import { EntityMetadata } from "../metadata/EntityMetadata"
+import { ExclusionMetadata } from "../metadata/ExclusionMetadata"
+import { IndexMetadata } from "../metadata/IndexMetadata"
+import { RelationCountMetadata } from "../metadata/RelationCountMetadata"
+import { RelationIdMetadata } from "../metadata/RelationIdMetadata"
+import { RelationMetadata } from "../metadata/RelationMetadata"
+import { EventListenerTypes } from "../metadata/types/EventListenerTypes"
+import { UniqueMetadata } from "../metadata/UniqueMetadata"
+import { ClosureJunctionEntityMetadataBuilder } from "./ClosureJunctionEntityMetadataBuilder"
+import { JunctionEntityMetadataBuilder } from "./JunctionEntityMetadataBuilder"
+import { MetadataUtils } from "./MetadataUtils"
+import { RelationJoinColumnBuilder } from "./RelationJoinColumnBuilder"
 
 /**
  * Builds EntityMetadata objects and all its sub-metadatas.
@@ -189,91 +188,14 @@ export class EntityMetadataBuilder {
                             relation.registerJoinColumns(columns)
                         }
                         if (uniqueConstraint) {
-                            if (
-                                DriverUtils.isMySQLFamily(
-                                    this.connection.driver,
-                                ) ||
-                                this.connection.driver.options.type ===
-                                    "aurora-mysql" ||
-                                this.connection.driver.options.type ===
-                                    "mssql" ||
-                                this.connection.driver.options.type === "sap" ||
-                                this.connection.driver.options.type ===
-                                    "spanner"
-                            ) {
-                                const index = new IndexMetadata({
-                                    entityMetadata:
-                                        uniqueConstraint.entityMetadata,
-                                    columns: uniqueConstraint.columns,
-                                    args: {
-                                        target: uniqueConstraint.target!,
-                                        name: uniqueConstraint.name,
-                                        unique: true,
-                                        synchronize: true,
-                                    },
-                                })
-
-                                if (
-                                    this.connection.driver.options.type ===
-                                    "mssql"
-                                ) {
-                                    index.where = index.columns
-                                        .map((column) => {
-                                            return `${this.connection.driver.escape(
-                                                column.databaseName,
-                                            )} IS NOT NULL`
-                                        })
-                                        .join(" AND ")
-                                }
-
-                                if (
-                                    this.connection.driver.options.type ===
-                                    "spanner"
-                                ) {
-                                    index.isNullFiltered = true
-                                }
-
-                                if (relation.embeddedMetadata) {
-                                    relation.embeddedMetadata.indices.push(
-                                        index,
-                                    )
-                                } else {
-                                    relation.entityMetadata.ownIndices.push(
-                                        index,
-                                    )
-                                }
-                                this.computeEntityMetadataStep2(entityMetadata)
-                            } else {
-                                if (relation.embeddedMetadata) {
-                                    relation.embeddedMetadata.uniques.push(
-                                        uniqueConstraint,
-                                    )
-                                } else {
-                                    relation.entityMetadata.ownUniques.push(
-                                        uniqueConstraint,
-                                    )
-                                }
-                                this.computeEntityMetadataStep2(entityMetadata)
-                            }
-                        }
-
-                        if (
-                            foreignKey &&
-                            this.connection.driver.options.type ===
-                                "cockroachdb"
-                        ) {
-                            const index = new IndexMetadata({
-                                entityMetadata: relation.entityMetadata,
-                                columns: foreignKey.columns,
-                                args: {
-                                    target: relation.entityMetadata.target!,
-                                    synchronize: true,
-                                },
-                            })
                             if (relation.embeddedMetadata) {
-                                relation.embeddedMetadata.indices.push(index)
+                                relation.embeddedMetadata.uniques.push(
+                                    uniqueConstraint,
+                                )
                             } else {
-                                relation.entityMetadata.ownIndices.push(index)
+                                relation.entityMetadata.ownUniques.push(
+                                    uniqueConstraint,
+                                )
                             }
                             this.computeEntityMetadataStep2(entityMetadata)
                         }
@@ -774,35 +696,13 @@ export class EntityMetadataBuilder {
         }
 
         // This drivers stores unique constraints as unique indices.
-        if (
-            DriverUtils.isMySQLFamily(this.connection.driver) ||
-            this.connection.driver.options.type === "aurora-mysql" ||
-            this.connection.driver.options.type === "sap" ||
-            this.connection.driver.options.type === "spanner"
-        ) {
-            const indices = this.metadataArgsStorage
-                .filterUniques(entityMetadata.inheritanceTree)
-                .map((args) => {
-                    return new IndexMetadata({
-                        entityMetadata: entityMetadata,
-                        args: {
-                            target: args.target,
-                            name: args.name,
-                            columns: args.columns,
-                            unique: true,
-                            synchronize: true,
-                        },
-                    })
-                })
-            entityMetadata.ownIndices.push(...indices)
-        } else {
-            const uniques = this.metadataArgsStorage
-                .filterUniques(entityMetadata.inheritanceTree)
-                .map((args) => {
-                    return new UniqueMetadata({ entityMetadata, args })
-                })
-            entityMetadata.ownUniques.push(...uniques)
-        }
+
+        const uniques = this.metadataArgsStorage
+            .filterUniques(entityMetadata.inheritanceTree)
+            .map((args) => {
+                return new UniqueMetadata({ entityMetadata, args })
+            })
+        entityMetadata.ownUniques.push(...uniques)
     }
 
     /**

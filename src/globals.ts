@@ -1,21 +1,18 @@
-import { MetadataArgsStorage } from "./metadata-args/MetadataArgsStorage"
-import { PlatformTools } from "./platform/PlatformTools"
-import { DataSourceOptions } from "./data-source/DataSourceOptions"
-import { ConnectionOptionsReader } from "./connection/ConnectionOptionsReader"
+import { EntityTarget } from "./common/EntityTarget"
+import { ObjectLiteral } from "./common/ObjectLiteral"
+import { ObjectType } from "./common/ObjectType"
 import { ConnectionManager } from "./connection/ConnectionManager"
+import { ConnectionOptionsReader } from "./connection/ConnectionOptionsReader"
 import { getFromContainer } from "./container"
 import { DataSource } from "./data-source/DataSource"
+import { DataSourceOptions } from "./data-source/DataSourceOptions"
 import { EntityManager } from "./entity-manager/EntityManager"
-import { MongoEntityManager } from "./entity-manager/MongoEntityManager"
-import { SqljsEntityManager } from "./entity-manager/SqljsEntityManager"
-import { EntityTarget } from "./common/EntityTarget"
+import { MetadataArgsStorage } from "./metadata-args/MetadataArgsStorage"
+import { PlatformTools } from "./platform/PlatformTools"
+import { SelectQueryBuilder } from "./query-builder/SelectQueryBuilder"
 import { Repository } from "./repository/Repository"
 import { TreeRepository } from "./repository/TreeRepository"
-import { ObjectType } from "./common/ObjectType"
-import { MongoRepository } from "./repository/MongoRepository"
-import { SelectQueryBuilder } from "./query-builder/SelectQueryBuilder"
 import { ObjectUtils } from "./util/ObjectUtils"
-import { ObjectLiteral } from "./common/ObjectLiteral"
 
 /**
  * Gets metadata args storage.
@@ -144,33 +141,6 @@ export function getManager(connectionName: string = "default"): EntityManager {
 }
 
 /**
- * Gets MongoDB entity manager from the connection.
- * If connection name wasn't specified, then "default" connection will be retrieved.
- *
- * @deprecated
- */
-export function getMongoManager(
-    connectionName: string = "default",
-): MongoEntityManager {
-    return getConnectionManager().get(connectionName)
-        .manager as MongoEntityManager
-}
-
-/**
- * Gets Sqljs entity manager from connection name.
- * "default" connection is used, when no name is specified.
- * Only works when Sqljs driver is used.
- *
- * @deprecated
- */
-export function getSqljsManager(
-    connectionName: string = "default",
-): SqljsEntityManager {
-    return getConnectionManager().get(connectionName)
-        .manager as SqljsEntityManager
-}
-
-/**
  * Gets repository for the given entity class.
  *
  * @deprecated
@@ -210,20 +180,6 @@ export function getCustomRepository<T>(
     return getConnectionManager()
         .get(connectionName)
         .getCustomRepository(customRepository)
-}
-
-/**
- * Gets mongodb repository for the given entity class or name.
- *
- * @deprecated
- */
-export function getMongoRepository<Entity extends ObjectLiteral>(
-    entityClass: EntityTarget<Entity>,
-    connectionName: string = "default",
-): MongoRepository<Entity> {
-    return getConnectionManager()
-        .get(connectionName)
-        .getMongoRepository<Entity>(entityClass)
 }
 
 /**

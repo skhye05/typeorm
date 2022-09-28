@@ -1,12 +1,11 @@
-import { ColumnMetadata } from "../metadata/ColumnMetadata"
 import { DataSource } from "../data-source/DataSource"
+import { TypeORMError } from "../error"
+import { JoinTableMetadataArgs } from "../metadata-args/JoinTableMetadataArgs"
+import { ColumnMetadata } from "../metadata/ColumnMetadata"
 import { EntityMetadata } from "../metadata/EntityMetadata"
 import { ForeignKeyMetadata } from "../metadata/ForeignKeyMetadata"
 import { IndexMetadata } from "../metadata/IndexMetadata"
-import { JoinTableMetadataArgs } from "../metadata-args/JoinTableMetadataArgs"
 import { RelationMetadata } from "../metadata/RelationMetadata"
-import { TypeORMError } from "../error"
-import { DriverUtils } from "../driver/DriverUtils"
 
 /**
  * Creates EntityMetadata for junction tables.
@@ -96,11 +95,6 @@ export class JunctionEntityMetadataBuilder {
                         name: columnName,
                         length:
                             !referencedColumn.length &&
-                            (DriverUtils.isMySQLFamily(
-                                this.connection.driver,
-                            ) ||
-                                this.connection.driver.options.type ===
-                                    "aurora-mysql") &&
                             (referencedColumn.generationStrategy === "uuid" ||
                                 referencedColumn.type === "uuid")
                                 ? "36"
@@ -160,11 +154,6 @@ export class JunctionEntityMetadataBuilder {
                         options: {
                             length:
                                 !inverseReferencedColumn.length &&
-                                (DriverUtils.isMySQLFamily(
-                                    this.connection.driver,
-                                ) ||
-                                    this.connection.driver.options.type ===
-                                        "aurora-mysql") &&
                                 (inverseReferencedColumn.generationStrategy ===
                                     "uuid" ||
                                     inverseReferencedColumn.type === "uuid")
@@ -220,15 +209,8 @@ export class JunctionEntityMetadataBuilder {
                       columns: junctionColumns,
                       referencedColumns: referencedColumns,
                       name: junctionColumns[0]?.foreignKeyConstraintName,
-                      onDelete:
-                          this.connection.driver.options.type === "spanner"
-                              ? "NO ACTION"
-                              : relation.onDelete || "CASCADE",
-                      onUpdate:
-                          this.connection.driver.options.type === "oracle" ||
-                          this.connection.driver.options.type === "spanner"
-                              ? "NO ACTION"
-                              : relation.onUpdate || "CASCADE",
+                      onDelete: relation.onDelete || "CASCADE",
+                      onUpdate: relation.onUpdate || "CASCADE",
                   }),
                   new ForeignKeyMetadata({
                       entityMetadata: entityMetadata,
@@ -236,19 +218,12 @@ export class JunctionEntityMetadataBuilder {
                       columns: inverseJunctionColumns,
                       referencedColumns: inverseReferencedColumns,
                       name: inverseJunctionColumns[0]?.foreignKeyConstraintName,
-                      onDelete:
-                          this.connection.driver.options.type === "spanner"
-                              ? "NO ACTION"
-                              : relation.inverseRelation
-                              ? relation.inverseRelation.onDelete
-                              : "CASCADE",
-                      onUpdate:
-                          this.connection.driver.options.type === "oracle" ||
-                          this.connection.driver.options.type === "spanner"
-                              ? "NO ACTION"
-                              : relation.inverseRelation
-                              ? relation.inverseRelation.onUpdate
-                              : "CASCADE",
+                      onDelete: relation.inverseRelation
+                          ? relation.inverseRelation.onDelete
+                          : "CASCADE",
+                      onUpdate: relation.inverseRelation
+                          ? relation.inverseRelation.onUpdate
+                          : "CASCADE",
                   }),
               ]
             : []

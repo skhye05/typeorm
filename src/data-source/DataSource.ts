@@ -1,45 +1,42 @@
-import { Driver } from "../driver/Driver"
-import { Repository } from "../repository/Repository"
-import { EntitySubscriberInterface } from "../subscriber/EntitySubscriberInterface"
+import { QueryResultCache } from "../cache/QueryResultCache"
+import { QueryResultCacheFactory } from "../cache/QueryResultCacheFactory"
 import { EntityTarget } from "../common/EntityTarget"
+import { ObjectLiteral } from "../common/ObjectLiteral"
 import { ObjectType } from "../common/ObjectType"
+import { ConnectionMetadataBuilder } from "../connection/ConnectionMetadataBuilder"
+import { Driver } from "../driver/Driver"
+import { DriverFactory } from "../driver/DriverFactory"
+import { DriverUtils } from "../driver/DriverUtils"
+import { IsolationLevel } from "../driver/types/IsolationLevel"
+import { ReplicationMode } from "../driver/types/ReplicationMode"
 import { EntityManager } from "../entity-manager/EntityManager"
-import { DefaultNamingStrategy } from "../naming-strategy/DefaultNamingStrategy"
+import { EntityManagerFactory } from "../entity-manager/EntityManagerFactory"
 import {
     CannotConnectAlreadyConnectedError,
     CannotExecuteNotConnectedError,
     EntityMetadataNotFoundError,
     QueryRunnerProviderAlreadyReleasedError,
+    TypeORMError,
 } from "../error"
-import { TreeRepository } from "../repository/TreeRepository"
-import { NamingStrategyInterface } from "../naming-strategy/NamingStrategyInterface"
-import { EntityMetadata } from "../metadata/EntityMetadata"
 import { Logger } from "../logger/Logger"
-import { MigrationInterface } from "../migration/MigrationInterface"
-import { MigrationExecutor } from "../migration/MigrationExecutor"
-import { Migration } from "../migration/Migration"
-import { MongoRepository } from "../repository/MongoRepository"
-import { MongoEntityManager } from "../entity-manager/MongoEntityManager"
-import { EntityMetadataValidator } from "../metadata-builder/EntityMetadataValidator"
-import { DataSourceOptions } from "./DataSourceOptions"
-import { EntityManagerFactory } from "../entity-manager/EntityManagerFactory"
-import { DriverFactory } from "../driver/DriverFactory"
-import { ConnectionMetadataBuilder } from "../connection/ConnectionMetadataBuilder"
-import { QueryRunner } from "../query-runner/QueryRunner"
-import { SelectQueryBuilder } from "../query-builder/SelectQueryBuilder"
 import { LoggerFactory } from "../logger/LoggerFactory"
-import { QueryResultCacheFactory } from "../cache/QueryResultCacheFactory"
-import { QueryResultCache } from "../cache/QueryResultCache"
-import { SqljsEntityManager } from "../entity-manager/SqljsEntityManager"
-import { RelationLoader } from "../query-builder/RelationLoader"
-import { ObjectUtils } from "../util/ObjectUtils"
-import { IsolationLevel } from "../driver/types/IsolationLevel"
-import { ReplicationMode } from "../driver/types/ReplicationMode"
-import { TypeORMError } from "../error"
+import { EntityMetadataValidator } from "../metadata-builder/EntityMetadataValidator"
+import { EntityMetadata } from "../metadata/EntityMetadata"
+import { Migration } from "../migration/Migration"
+import { MigrationExecutor } from "../migration/MigrationExecutor"
+import { MigrationInterface } from "../migration/MigrationInterface"
+import { DefaultNamingStrategy } from "../naming-strategy/DefaultNamingStrategy"
+import { NamingStrategyInterface } from "../naming-strategy/NamingStrategyInterface"
 import { RelationIdLoader } from "../query-builder/RelationIdLoader"
-import { DriverUtils } from "../driver/DriverUtils"
+import { RelationLoader } from "../query-builder/RelationLoader"
+import { SelectQueryBuilder } from "../query-builder/SelectQueryBuilder"
+import { QueryRunner } from "../query-runner/QueryRunner"
+import { Repository } from "../repository/Repository"
+import { TreeRepository } from "../repository/TreeRepository"
+import { EntitySubscriberInterface } from "../subscriber/EntitySubscriberInterface"
 import { InstanceChecker } from "../util/InstanceChecker"
-import { ObjectLiteral } from "../common/ObjectLiteral"
+import { ObjectUtils } from "../util/ObjectUtils"
+import { DataSourceOptions } from "./DataSourceOptions"
 
 /**
  * DataSource is a pre-defined connection configuration to a specific database.
@@ -160,35 +157,6 @@ export class DataSource {
      */
     get isConnected() {
         return this.isInitialized
-    }
-
-    /**
-     * Gets the mongodb entity manager that allows to perform mongodb-specific repository operations
-     * with any entity in this connection.
-     *
-     * Available only in mongodb connections.
-     */
-    get mongoManager(): MongoEntityManager {
-        if (!InstanceChecker.isMongoEntityManager(this.manager))
-            throw new TypeORMError(
-                `MongoEntityManager is only available for MongoDB databases.`,
-            )
-
-        return this.manager as MongoEntityManager
-    }
-
-    /**
-     * Gets a sql.js specific Entity Manager that allows to perform special load and save operations
-     *
-     * Available only in connection with the sqljs driver.
-     */
-    get sqljsManager(): SqljsEntityManager {
-        if (!InstanceChecker.isSqljsEntityManager(this.manager))
-            throw new TypeORMError(
-                `SqljsEntityManager is only available for Sqljs databases.`,
-            )
-
-        return this.manager
     }
 
     // -------------------------------------------------------------------------
@@ -327,33 +295,24 @@ export class DataSource {
     async dropDatabase(): Promise<void> {
         const queryRunner = this.createQueryRunner()
         try {
-            if (
-                this.driver.options.type === "mssql" ||
-                DriverUtils.isMySQLFamily(this.driver) ||
-                this.driver.options.type === "aurora-mysql" ||
-                DriverUtils.isSQLiteFamily(this.driver)
-            ) {
-                const databases: string[] = []
-                this.entityMetadatas.forEach((metadata) => {
-                    if (
-                        metadata.database &&
-                        databases.indexOf(metadata.database) === -1
-                    )
-                        databases.push(metadata.database)
-                })
-                if (databases.length === 0 && this.driver.database) {
-                    databases.push(this.driver.database)
-                }
+            const databases: string[] = []
+            this.entityMetadatas.forEach((metadata) => {
+                if (
+                    metadata.database &&
+                    databases.indexOf(metadata.database) === -1
+                )
+                    databases.push(metadata.database)
+            })
+            if (databases.length === 0 && this.driver.database) {
+                databases.push(this.driver.database)
+            }
 
-                if (databases.length === 0) {
-                    await queryRunner.clearDatabase()
-                } else {
-                    for (const database of databases) {
-                        await queryRunner.clearDatabase(database)
-                    }
-                }
-            } else {
+            if (databases.length === 0) {
                 await queryRunner.clearDatabase()
+            } else {
+                for (const database of databases) {
+                    await queryRunner.clearDatabase(database)
+                }
             }
         } finally {
             await queryRunner.release()
@@ -449,21 +408,6 @@ export class DataSource {
     }
 
     /**
-     * Gets mongodb-specific repository for the given entity class or name.
-     * Works only if connection is mongodb-specific.
-     */
-    getMongoRepository<Entity extends ObjectLiteral>(
-        target: EntityTarget<Entity>,
-    ): MongoRepository<Entity> {
-        if (!(this.driver.options.type === "mongodb"))
-            throw new TypeORMError(
-                `You can use getMongoRepository only for MongoDB connections.`,
-            )
-
-        return this.manager.getRepository(target) as any
-    }
-
-    /**
      * Gets custom entity repository marked with @EntityRepository decorator.
      *
      * @deprecated use Repository.extend function to create a custom repository
@@ -503,9 +447,6 @@ export class DataSource {
         parameters?: any[],
         queryRunner?: QueryRunner,
     ): Promise<any> {
-        if (InstanceChecker.isMongoEntityManager(this.manager))
-            throw new TypeORMError(`Queries aren't supported by MongoDB.`)
-
         if (queryRunner && queryRunner.isReleased)
             throw new QueryRunnerProviderAlreadyReleasedError()
 
@@ -540,9 +481,6 @@ export class DataSource {
         alias?: string,
         queryRunner?: QueryRunner,
     ): SelectQueryBuilder<Entity> {
-        if (InstanceChecker.isMongoEntityManager(this.manager))
-            throw new TypeORMError(`Query Builder is not supported by MongoDB.`)
-
         if (alias) {
             alias = DriverUtils.buildAlias(this.driver, alias)
             const metadata = this.getMetadata(
@@ -658,7 +596,7 @@ export class DataSource {
         const entityMetadataValidator = new EntityMetadataValidator()
 
         // create subscribers instances if they are not disallowed from high-level (for example they can disallowed from migrations run process)
-        const flattenedSubscribers = ObjectUtils.mixedListToArray(
+        const flattenedSubscribers: any = ObjectUtils.mixedListToArray(
             this.options.subscribers || [],
         )
         const subscribers = await connectionMetadataBuilder.buildSubscribers(
@@ -667,7 +605,7 @@ export class DataSource {
         ObjectUtils.assign(this, { subscribers: subscribers })
 
         // build entity metadatas
-        const flattenedEntities = ObjectUtils.mixedListToArray(
+        const flattenedEntities: any = ObjectUtils.mixedListToArray(
             this.options.entities || [],
         )
         const entityMetadatas =
@@ -677,7 +615,7 @@ export class DataSource {
         ObjectUtils.assign(this, { entityMetadatas: entityMetadatas })
 
         // create migration instances
-        const flattenedMigrations = ObjectUtils.mixedListToArray(
+        const flattenedMigrations: any = ObjectUtils.mixedListToArray(
             this.options.migrations || [],
         )
         const migrations = await connectionMetadataBuilder.buildMigrations(

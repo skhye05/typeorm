@@ -1,6 +1,5 @@
-import { FindOperator } from "./FindOperator"
-import { ObjectID } from "../driver/mongodb/typings"
 import { EqualOperator } from "./EqualOperator"
+import { FindOperator } from "./FindOperator"
 
 /**
  * A single property handler for FindOptionsWhere.
@@ -16,8 +15,6 @@ export type FindOptionsWhereProperty<Property> = Property extends Promise<
     : Property extends Buffer
     ? Property | FindOperator<Property>
     : Property extends Date
-    ? Property | FindOperator<Property>
-    : Property extends ObjectID
     ? Property | FindOperator<Property>
     : Property extends object
     ?

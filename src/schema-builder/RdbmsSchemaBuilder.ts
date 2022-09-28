@@ -1,21 +1,20 @@
-import { Table } from "./table/Table"
-import { TableColumn } from "./table/TableColumn"
-import { TableForeignKey } from "./table/TableForeignKey"
-import { TableIndex } from "./table/TableIndex"
-import { QueryRunner } from "../query-runner/QueryRunner"
+import { DataSource } from "../data-source/DataSource"
+import { SqlInMemory } from "../driver/SqlInMemory"
 import { ColumnMetadata } from "../metadata/ColumnMetadata"
 import { EntityMetadata } from "../metadata/EntityMetadata"
-import { DataSource } from "../data-source/DataSource"
-import { SchemaBuilder } from "./SchemaBuilder"
-import { SqlInMemory } from "../driver/SqlInMemory"
-import { TableUtils } from "./util/TableUtils"
+import { QueryRunner } from "../query-runner/QueryRunner"
 import { TableColumnOptions } from "./options/TableColumnOptions"
-import { TableUnique } from "./table/TableUnique"
+import { SchemaBuilder } from "./SchemaBuilder"
+import { Table } from "./table/Table"
 import { TableCheck } from "./table/TableCheck"
+import { TableColumn } from "./table/TableColumn"
 import { TableExclusion } from "./table/TableExclusion"
-import { View } from "./view/View"
+import { TableForeignKey } from "./table/TableForeignKey"
+import { TableIndex } from "./table/TableIndex"
+import { TableUnique } from "./table/TableUnique"
+import { TableUtils } from "./util/TableUtils"
 import { ViewUtils } from "./util/ViewUtils"
-import { DriverUtils } from "../driver/DriverUtils"
+import { View } from "./view/View"
 
 /**
  * Creates complete tables schemas in the database based on the entity metadatas.
@@ -423,13 +422,6 @@ export class RdbmsSchemaBuilder implements SchemaBuilder {
     }
 
     protected async dropOldChecks(): Promise<void> {
-        // Mysql does not support check constraints
-        if (
-            DriverUtils.isMySQLFamily(this.connection.driver) ||
-            this.connection.driver.options.type === "aurora-mysql"
-        )
-            return
-
         for (const metadata of this.entityToSyncMetadatas) {
             const table = this.queryRunner.loadedTables.find(
                 (table) =>
@@ -826,20 +818,12 @@ export class RdbmsSchemaBuilder implements SchemaBuilder {
             }
 
             // drop all composite uniques related to this column
-            // Mysql does not support unique constraints.
-            if (
-                !(
-                    DriverUtils.isMySQLFamily(this.connection.driver) ||
-                    this.connection.driver.options.type === "aurora-mysql" ||
-                    this.connection.driver.options.type === "spanner"
+
+            for (const changedColumn of changedColumns) {
+                await this.dropColumnCompositeUniques(
+                    this.getTablePath(metadata),
+                    changedColumn.databaseName,
                 )
-            ) {
-                for (const changedColumn of changedColumns) {
-                    await this.dropColumnCompositeUniques(
-                        this.getTablePath(metadata),
-                        changedColumn.databaseName,
-                    )
-                }
             }
 
             // generate a map of new/old columns
@@ -909,13 +893,6 @@ export class RdbmsSchemaBuilder implements SchemaBuilder {
     }
 
     protected async createNewChecks(): Promise<void> {
-        // Mysql does not support check constraints
-        if (
-            DriverUtils.isMySQLFamily(this.connection.driver) ||
-            this.connection.driver.options.type === "aurora-mysql"
-        )
-            return
-
         for (const metadata of this.entityToSyncMetadatas) {
             const table = this.queryRunner.loadedTables.find(
                 (table) =>

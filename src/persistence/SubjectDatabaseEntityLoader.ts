@@ -1,8 +1,7 @@
-import { Subject } from "./Subject"
 import { ObjectLiteral } from "../common/ObjectLiteral"
-import { QueryRunner } from "../query-runner/QueryRunner"
 import { FindManyOptions } from "../find-options/FindManyOptions"
-import { MongoRepository } from "../repository/MongoRepository"
+import { QueryRunner } from "../query-runner/QueryRunner"
+import { Subject } from "./Subject"
 
 /**
  * Loads database entities for all operate subjects which do not have database entity set.
@@ -105,23 +104,13 @@ export class SubjectDatabaseEntityLoader {
 
                 // load database entities for all given ids
                 let entities: any[] = []
-                if (
-                    this.queryRunner.connection.driver.options.type ===
-                    "mongodb"
-                ) {
-                    const mongoRepo =
-                        this.queryRunner.manager.getRepository<ObjectLiteral>(
-                            subjectGroup.target,
-                        ) as MongoRepository<ObjectLiteral>
-                    entities = await mongoRepo.findByIds(allIds, findOptions)
-                } else {
-                    entities = await this.queryRunner.manager
-                        .getRepository<ObjectLiteral>(subjectGroup.target)
-                        .createQueryBuilder()
-                        .setFindOptions(findOptions)
-                        .whereInIds(allIds)
-                        .getMany()
-                }
+
+                entities = await this.queryRunner.manager
+                    .getRepository<ObjectLiteral>(subjectGroup.target)
+                    .createQueryBuilder()
+                    .setFindOptions(findOptions)
+                    .whereInIds(allIds)
+                    .getMany()
 
                 // now when we have entities we need to find subject of each entity
                 // and insert that entity into database entity of the found subjects

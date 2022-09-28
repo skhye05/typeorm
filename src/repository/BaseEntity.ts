@@ -1,20 +1,19 @@
-import { Repository } from "./Repository"
-import { FindOptionsWhere } from "../find-options/FindOptionsWhere"
 import { DeepPartial } from "../common/DeepPartial"
-import { SaveOptions } from "./SaveOptions"
-import { FindOneOptions } from "../find-options/FindOneOptions"
-import { RemoveOptions } from "./RemoveOptions"
-import { FindManyOptions } from "../find-options/FindManyOptions"
+import { EntityTarget } from "../common/EntityTarget"
 import { DataSource } from "../data-source"
-import { SelectQueryBuilder } from "../query-builder/SelectQueryBuilder"
+import { FindManyOptions } from "../find-options/FindManyOptions"
+import { FindOneOptions } from "../find-options/FindOneOptions"
+import { FindOptionsWhere } from "../find-options/FindOptionsWhere"
+import { QueryDeepPartialEntity } from "../query-builder/QueryPartialEntity"
+import { DeleteResult } from "../query-builder/result/DeleteResult"
 import { InsertResult } from "../query-builder/result/InsertResult"
 import { UpdateResult } from "../query-builder/result/UpdateResult"
-import { DeleteResult } from "../query-builder/result/DeleteResult"
-import { ObjectID } from "../driver/mongodb/typings"
+import { SelectQueryBuilder } from "../query-builder/SelectQueryBuilder"
 import { ObjectUtils } from "../util/ObjectUtils"
-import { QueryDeepPartialEntity } from "../query-builder/QueryPartialEntity"
+import { RemoveOptions } from "./RemoveOptions"
+import { Repository } from "./Repository"
+import { SaveOptions } from "./SaveOptions"
 import { UpsertOptions } from "./UpsertOptions"
-import { EntityTarget } from "../common/EntityTarget"
 
 /**
  * Base abstract entity for all entities, used in ActiveRecord patterns.
@@ -340,8 +339,6 @@ export class BaseEntity {
             | number[]
             | Date
             | Date[]
-            | ObjectID
-            | ObjectID[]
             | FindOptionsWhere<T>,
         partialEntity: QueryDeepPartialEntity<T>,
     ): Promise<UpdateResult> {
@@ -381,8 +378,6 @@ export class BaseEntity {
             | number[]
             | Date
             | Date[]
-            | ObjectID
-            | ObjectID[]
             | FindOptionsWhere<T>,
     ): Promise<DeleteResult> {
         return this.getRepository<T>().delete(criteria)
@@ -500,7 +495,7 @@ export class BaseEntity {
      */
     static findOneById<T extends BaseEntity>(
         this: { new (): T } & typeof BaseEntity,
-        id: string | number | Date | ObjectID,
+        id: string | number | Date,
     ): Promise<T | null> {
         return this.getRepository<T>().findOneById(id)
     }

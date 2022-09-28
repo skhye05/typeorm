@@ -1,6 +1,6 @@
-import { Driver } from "./Driver"
 import { hash, shorten } from "../util/StringUtils"
 import { VersionUtils } from "../util/VersionUtils"
+import { Driver } from "./Driver"
 
 /**
  * Common driver utility functions.
@@ -14,23 +14,7 @@ export class DriverUtils {
      * Returns true if given driver is SQLite-based driver.
      */
     static isSQLiteFamily(driver: Driver): boolean {
-        return [
-            "sqlite",
-            "cordova",
-            "react-native",
-            "nativescript",
-            "sqljs",
-            "expo",
-            "better-sqlite3",
-            "capacitor",
-        ].includes(driver.options.type)
-    }
-
-    /**
-     * Returns true if given driver is MySQL-based driver.
-     */
-    static isMySQLFamily(driver: Driver): boolean {
-        return ["mysql", "mariadb"].includes(driver.options.type)
+        return ["nativescript"].includes(driver.options.type)
     }
 
     static isReleaseVersionOrGreater(driver: Driver, version: string): boolean {
@@ -38,10 +22,6 @@ export class DriverUtils {
             driver.version != null &&
             VersionUtils.isGreaterOrEqual(driver.version, version)
         )
-    }
-
-    static isPostgresFamily(driver: Driver): boolean {
-        return ["postgres", "aurora-postgres"].includes(driver.options.type)
     }
 
     /**

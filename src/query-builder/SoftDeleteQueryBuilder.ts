@@ -1,20 +1,19 @@
-import { QueryBuilder } from "./QueryBuilder"
-import { ObjectLiteral } from "../common/ObjectLiteral"
 import { EntityTarget } from "../common/EntityTarget"
+import { ObjectLiteral } from "../common/ObjectLiteral"
 import { DataSource } from "../data-source/DataSource"
-import { QueryRunner } from "../query-runner/QueryRunner"
-import { WhereExpressionBuilder } from "./WhereExpressionBuilder"
-import { Brackets } from "./Brackets"
-import { UpdateResult } from "./result/UpdateResult"
-import { ReturningStatementNotSupportedError } from "../error/ReturningStatementNotSupportedError"
-import { ReturningResultsEntityUpdator } from "./ReturningResultsEntityUpdator"
-import { OrderByCondition } from "../find-options/OrderByCondition"
+import { TypeORMError } from "../error"
 import { LimitOnUpdateNotSupportedError } from "../error/LimitOnUpdateNotSupportedError"
 import { MissingDeleteDateColumnError } from "../error/MissingDeleteDateColumnError"
+import { ReturningStatementNotSupportedError } from "../error/ReturningStatementNotSupportedError"
 import { UpdateValuesMissingError } from "../error/UpdateValuesMissingError"
-import { TypeORMError } from "../error"
-import { DriverUtils } from "../driver/DriverUtils"
+import { OrderByCondition } from "../find-options/OrderByCondition"
+import { QueryRunner } from "../query-runner/QueryRunner"
 import { InstanceChecker } from "../util/InstanceChecker"
+import { Brackets } from "./Brackets"
+import { QueryBuilder } from "./QueryBuilder"
+import { UpdateResult } from "./result/UpdateResult"
+import { ReturningResultsEntityUpdator } from "./ReturningResultsEntityUpdator"
+import { WhereExpressionBuilder } from "./WhereExpressionBuilder"
 
 /**
  * Allows to build complex sql queries in a fashion way and execute those queries.
@@ -553,11 +552,7 @@ export class SoftDeleteQueryBuilder<Entity extends ObjectLiteral>
         let limit: number | undefined = this.expressionMap.limit
 
         if (limit) {
-            if (DriverUtils.isMySQLFamily(this.connection.driver)) {
-                return " LIMIT " + limit
-            } else {
-                throw new LimitOnUpdateNotSupportedError()
-            }
+            throw new LimitOnUpdateNotSupportedError()
         }
 
         return ""

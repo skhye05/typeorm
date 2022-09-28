@@ -124,10 +124,8 @@ export * from "./schema-builder/options/TableIndexOptions"
 export * from "./schema-builder/options/TableOptions"
 export * from "./schema-builder/options/TableUniqueOptions"
 export * from "./schema-builder/options/ViewOptions"
-export * from "./driver/mongodb/typings"
 export * from "./driver/types/DatabaseType"
 export * from "./driver/types/ReplicationMode"
-export * from "./driver/sqlserver/MssqlParameter"
 
 // export * from "./data-source";
 
@@ -153,7 +151,6 @@ export { UpdateResult } from "./query-builder/result/UpdateResult"
 export { DeleteResult } from "./query-builder/result/DeleteResult"
 export { QueryResult } from "./query-runner/QueryResult"
 export { QueryRunner } from "./query-runner/QueryRunner"
-export { MongoEntityManager } from "./entity-manager/MongoEntityManager"
 export { Migration } from "./migration/Migration"
 export { MigrationExecutor } from "./migration/MigrationExecutor"
 export { MigrationInterface } from "./migration/MigrationInterface"

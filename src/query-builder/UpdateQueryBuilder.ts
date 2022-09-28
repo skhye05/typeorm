@@ -1,23 +1,19 @@
-import { ColumnMetadata } from "../metadata/ColumnMetadata"
-import { QueryBuilder } from "./QueryBuilder"
 import { ObjectLiteral } from "../common/ObjectLiteral"
 import { DataSource } from "../data-source/DataSource"
-import { QueryRunner } from "../query-runner/QueryRunner"
-import { WhereExpressionBuilder } from "./WhereExpressionBuilder"
-import { Brackets } from "./Brackets"
-import { UpdateResult } from "./result/UpdateResult"
-import { ReturningStatementNotSupportedError } from "../error/ReturningStatementNotSupportedError"
-import { ReturningResultsEntityUpdator } from "./ReturningResultsEntityUpdator"
-import { MysqlDriver } from "../driver/mysql/MysqlDriver"
-import { OrderByCondition } from "../find-options/OrderByCondition"
-import { LimitOnUpdateNotSupportedError } from "../error/LimitOnUpdateNotSupportedError"
-import { UpdateValuesMissingError } from "../error/UpdateValuesMissingError"
-import { QueryDeepPartialEntity } from "./QueryPartialEntity"
-import { AuroraMysqlDriver } from "../driver/aurora-mysql/AuroraMysqlDriver"
 import { TypeORMError } from "../error"
 import { EntityPropertyNotFoundError } from "../error/EntityPropertyNotFoundError"
-import { SqlServerDriver } from "../driver/sqlserver/SqlServerDriver"
-import { DriverUtils } from "../driver/DriverUtils"
+import { LimitOnUpdateNotSupportedError } from "../error/LimitOnUpdateNotSupportedError"
+import { ReturningStatementNotSupportedError } from "../error/ReturningStatementNotSupportedError"
+import { UpdateValuesMissingError } from "../error/UpdateValuesMissingError"
+import { OrderByCondition } from "../find-options/OrderByCondition"
+import { ColumnMetadata } from "../metadata/ColumnMetadata"
+import { QueryRunner } from "../query-runner/QueryRunner"
+import { Brackets } from "./Brackets"
+import { QueryBuilder } from "./QueryBuilder"
+import { QueryDeepPartialEntity } from "./QueryPartialEntity"
+import { UpdateResult } from "./result/UpdateResult"
+import { ReturningResultsEntityUpdator } from "./ReturningResultsEntityUpdator"
+import { WhereExpressionBuilder } from "./WhereExpressionBuilder"
 
 /**
  * Allows to build complex sql queries in a fashion way and execute those queries.
@@ -123,19 +119,6 @@ export class UpdateQueryBuilder<Entity extends ObjectLiteral>
                         (c) => !returningColumns.includes(c),
                     ),
                 )
-            }
-
-            if (
-                returningColumns.length > 0 &&
-                this.connection.driver.options.type === "mssql"
-            ) {
-                declareSql = (
-                    this.connection.driver as SqlServerDriver
-                ).buildTableVariableDeclaration(
-                    "@OutputTable",
-                    returningColumns,
-                )
-                selectOutputSql = `SELECT * FROM @OutputTable`
             }
 
             // execute update query
@@ -540,79 +523,13 @@ export class UpdateQueryBuilder<Entity extends ObjectLiteral>
                                     " = " +
                                     value(),
                             )
-                        } else if (
-                            (this.connection.driver.options.type === "sap" ||
-                                this.connection.driver.options.type ===
-                                    "spanner") &&
-                            value === null
-                        ) {
-                            updateColumnAndValues.push(
-                                this.escape(column.databaseName) + " = NULL",
-                            )
                         } else {
-                            if (
-                                this.connection.driver.options.type === "mssql"
-                            ) {
-                                value = (
-                                    this.connection.driver as SqlServerDriver
-                                ).parametrizeValue(column, value)
-                            }
-
                             const paramName = this.createParameter(value)
 
                             let expression = null
-                            if (
-                                (DriverUtils.isMySQLFamily(
-                                    this.connection.driver,
-                                ) ||
-                                    this.connection.driver.options.type ===
-                                        "aurora-mysql") &&
-                                this.connection.driver.spatialTypes.indexOf(
-                                    column.type,
-                                ) !== -1
-                            ) {
-                                const useLegacy = (
-                                    this.connection.driver as
-                                        | MysqlDriver
-                                        | AuroraMysqlDriver
-                                ).options.legacySpatialSupport
-                                const geomFromText = useLegacy
-                                    ? "GeomFromText"
-                                    : "ST_GeomFromText"
-                                if (column.srid != null) {
-                                    expression = `${geomFromText}(${paramName}, ${column.srid})`
-                                } else {
-                                    expression = `${geomFromText}(${paramName})`
-                                }
-                            } else if (
-                                this.connection.driver.options.type ===
-                                    "postgres" &&
-                                this.connection.driver.spatialTypes.indexOf(
-                                    column.type,
-                                ) !== -1
-                            ) {
-                                if (column.srid != null) {
-                                    expression = `ST_SetSRID(ST_GeomFromGeoJSON(${paramName}), ${column.srid})::${column.type}`
-                                } else {
-                                    expression = `ST_GeomFromGeoJSON(${paramName})::${column.type}`
-                                }
-                            } else if (
-                                this.connection.driver.options.type ===
-                                    "mssql" &&
-                                this.connection.driver.spatialTypes.indexOf(
-                                    column.type,
-                                ) !== -1
-                            ) {
-                                expression =
-                                    column.type +
-                                    "::STGeomFromText(" +
-                                    paramName +
-                                    ", " +
-                                    (column.srid || "0") +
-                                    ")"
-                            } else {
-                                expression = paramName
-                            }
+
+                            expression = paramName
+
                             updateColumnAndValues.push(
                                 this.escape(column.databaseName) +
                                     " = " +
@@ -742,14 +659,7 @@ export class UpdateQueryBuilder<Entity extends ObjectLiteral>
         let limit: number | undefined = this.expressionMap.limit
 
         if (limit) {
-            if (
-                DriverUtils.isMySQLFamily(this.connection.driver) ||
-                this.connection.driver.options.type === "aurora-mysql"
-            ) {
-                return " LIMIT " + limit
-            } else {
-                throw new LimitOnUpdateNotSupportedError()
-            }
+            throw new LimitOnUpdateNotSupportedError()
         }
 
         return ""

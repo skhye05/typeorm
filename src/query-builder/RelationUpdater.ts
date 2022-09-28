@@ -1,8 +1,8 @@
-import { QueryBuilder } from "./QueryBuilder"
 import { ObjectLiteral } from "../common/ObjectLiteral"
-import { QueryExpressionMap } from "./QueryExpressionMap"
 import { TypeORMError } from "../error"
 import { ObjectUtils } from "../util/ObjectUtils"
+import { QueryBuilder } from "./QueryBuilder"
+import { QueryExpressionMap } from "./QueryExpressionMap"
 
 /**
  * Allows to work with entity relations and perform specific operations with those relations.
@@ -160,28 +160,12 @@ export class RelationUpdater {
 
             if (!bulkInserted.length) return
 
-            if (
-                this.queryBuilder.connection.driver.options.type === "oracle" ||
-                this.queryBuilder.connection.driver.options.type === "sap"
-            ) {
-                await Promise.all(
-                    bulkInserted.map((value) => {
-                        return this.queryBuilder
-                            .createQueryBuilder()
-                            .insert()
-                            .into(junctionMetadata.tableName)
-                            .values(value)
-                            .execute()
-                    }),
-                )
-            } else {
-                await this.queryBuilder
-                    .createQueryBuilder()
-                    .insert()
-                    .into(junctionMetadata.tableName)
-                    .values(bulkInserted)
-                    .execute()
-            }
+            await this.queryBuilder
+                .createQueryBuilder()
+                .insert()
+                .into(junctionMetadata.tableName)
+                .values(bulkInserted)
+                .execute()
         }
     }
 }

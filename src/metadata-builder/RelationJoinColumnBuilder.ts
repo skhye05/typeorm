@@ -1,11 +1,10 @@
-import { ColumnMetadata } from "../metadata/ColumnMetadata"
-import { UniqueMetadata } from "../metadata/UniqueMetadata"
-import { ForeignKeyMetadata } from "../metadata/ForeignKeyMetadata"
-import { RelationMetadata } from "../metadata/RelationMetadata"
-import { JoinColumnMetadataArgs } from "../metadata-args/JoinColumnMetadataArgs"
 import { DataSource } from "../data-source/DataSource"
 import { TypeORMError } from "../error"
-import { DriverUtils } from "../driver/DriverUtils"
+import { JoinColumnMetadataArgs } from "../metadata-args/JoinColumnMetadataArgs"
+import { ColumnMetadata } from "../metadata/ColumnMetadata"
+import { ForeignKeyMetadata } from "../metadata/ForeignKeyMetadata"
+import { RelationMetadata } from "../metadata/RelationMetadata"
+import { UniqueMetadata } from "../metadata/UniqueMetadata"
 
 /**
  * Builds join column for the many-to-one and one-to-one owner relations.
@@ -86,13 +85,6 @@ export class RelationJoinColumnBuilder {
             onUpdate: relation.onUpdate,
             deferrable: relation.deferrable,
         })
-
-        // Oracle does not allow both primary and unique constraints on the same column
-        if (
-            this.connection.driver.options.type === "oracle" &&
-            columns.every((column) => column.isPrimary)
-        )
-            return { foreignKey, columns, uniqueConstraint: undefined }
 
         // CockroachDB requires UNIQUE constraints on referenced columns
         if (referencedColumns.length > 0 && relation.isOneToOne) {
@@ -203,11 +195,6 @@ export class RelationJoinColumnBuilder {
                             type: referencedColumn.type,
                             length:
                                 !referencedColumn.length &&
-                                (DriverUtils.isMySQLFamily(
-                                    this.connection.driver,
-                                ) ||
-                                    this.connection.driver.options.type ===
-                                        "aurora-mysql") &&
                                 (referencedColumn.generationStrategy ===
                                     "uuid" ||
                                     referencedColumn.type === "uuid")

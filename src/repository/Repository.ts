@@ -1,20 +1,19 @@
-import { FindManyOptions } from "../find-options/FindManyOptions"
-import { ObjectLiteral } from "../common/ObjectLiteral"
-import { FindOneOptions } from "../find-options/FindOneOptions"
 import { DeepPartial } from "../common/DeepPartial"
-import { SaveOptions } from "./SaveOptions"
-import { RemoveOptions } from "./RemoveOptions"
-import { EntityManager } from "../entity-manager/EntityManager"
-import { QueryRunner } from "../query-runner/QueryRunner"
-import { SelectQueryBuilder } from "../query-builder/SelectQueryBuilder"
-import { DeleteResult } from "../query-builder/result/DeleteResult"
-import { UpdateResult } from "../query-builder/result/UpdateResult"
-import { InsertResult } from "../query-builder/result/InsertResult"
-import { QueryDeepPartialEntity } from "../query-builder/QueryPartialEntity"
-import { ObjectID } from "../driver/mongodb/typings"
-import { FindOptionsWhere } from "../find-options/FindOptionsWhere"
-import { UpsertOptions } from "./UpsertOptions"
 import { EntityTarget } from "../common/EntityTarget"
+import { ObjectLiteral } from "../common/ObjectLiteral"
+import { EntityManager } from "../entity-manager/EntityManager"
+import { FindManyOptions } from "../find-options/FindManyOptions"
+import { FindOneOptions } from "../find-options/FindOneOptions"
+import { FindOptionsWhere } from "../find-options/FindOptionsWhere"
+import { QueryDeepPartialEntity } from "../query-builder/QueryPartialEntity"
+import { DeleteResult } from "../query-builder/result/DeleteResult"
+import { InsertResult } from "../query-builder/result/InsertResult"
+import { UpdateResult } from "../query-builder/result/UpdateResult"
+import { SelectQueryBuilder } from "../query-builder/SelectQueryBuilder"
+import { QueryRunner } from "../query-runner/QueryRunner"
+import { RemoveOptions } from "./RemoveOptions"
+import { SaveOptions } from "./SaveOptions"
+import { UpsertOptions } from "./UpsertOptions"
 
 /**
  * Repository is supposed to work with your entity objects. Find entities, insert, update, delete, etc.
@@ -352,8 +351,6 @@ export class Repository<Entity extends ObjectLiteral> {
             | number[]
             | Date
             | Date[]
-            | ObjectID
-            | ObjectID[]
             | FindOptionsWhere<Entity>,
         partialEntity: QueryDeepPartialEntity<Entity>,
     ): Promise<UpdateResult> {
@@ -396,8 +393,6 @@ export class Repository<Entity extends ObjectLiteral> {
             | number[]
             | Date
             | Date[]
-            | ObjectID
-            | ObjectID[]
             | FindOptionsWhere<Entity>,
     ): Promise<DeleteResult> {
         return this.manager.delete(this.metadata.target as any, criteria as any)
@@ -417,8 +412,6 @@ export class Repository<Entity extends ObjectLiteral> {
             | number[]
             | Date
             | Date[]
-            | ObjectID
-            | ObjectID[]
             | FindOptionsWhere<Entity>,
     ): Promise<UpdateResult> {
         return this.manager.softDelete(
@@ -441,8 +434,6 @@ export class Repository<Entity extends ObjectLiteral> {
             | number[]
             | Date
             | Date[]
-            | ObjectID
-            | ObjectID[]
             | FindOptionsWhere<Entity>,
     ): Promise<UpdateResult> {
         return this.manager.restore(
@@ -549,9 +540,7 @@ export class Repository<Entity extends ObjectLiteral> {
      *     id: 1 // where "id" is your primary column name
      * })
      */
-    async findOneById(
-        id: number | string | Date | ObjectID,
-    ): Promise<Entity | null> {
+    async findOneById(id: number | string | Date): Promise<Entity | null> {
         return this.manager.findOneById(this.metadata.target, id)
     }
 

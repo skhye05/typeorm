@@ -1,48 +1,45 @@
-import { RawSqlResultsToEntityTransformer } from "./transformer/RawSqlResultsToEntityTransformer"
+import { QueryResultCacheOptions } from "../cache/QueryResultCacheOptions"
+import { EntityTarget } from "../common/EntityTarget"
 import { ObjectLiteral } from "../common/ObjectLiteral"
-import { PessimisticLockTransactionRequiredError } from "../error/PessimisticLockTransactionRequiredError"
+import { DriverUtils } from "../driver/DriverUtils"
+import { TypeORMError } from "../error"
+import { EntityNotFoundError } from "../error/EntityNotFoundError"
+import { EntityPropertyNotFoundError } from "../error/EntityPropertyNotFoundError"
+import { LockNotSupportedOnGivenDriverError } from "../error/LockNotSupportedOnGivenDriverError"
 import { NoVersionOrUpdateDateColumnError } from "../error/NoVersionOrUpdateDateColumnError"
-import { OptimisticLockVersionMismatchError } from "../error/OptimisticLockVersionMismatchError"
 import { OptimisticLockCanNotBeUsedError } from "../error/OptimisticLockCanNotBeUsedError"
+import { OptimisticLockVersionMismatchError } from "../error/OptimisticLockVersionMismatchError"
+import { PessimisticLockTransactionRequiredError } from "../error/PessimisticLockTransactionRequiredError"
+import { FindManyOptions } from "../find-options/FindManyOptions"
+import { FindOptionsOrder } from "../find-options/FindOptionsOrder"
+import { FindOptionsRelations } from "../find-options/FindOptionsRelations"
+import { FindOptionsSelect } from "../find-options/FindOptionsSelect"
+import { FindOptionsUtils } from "../find-options/FindOptionsUtils"
+import { FindOptionsWhere } from "../find-options/FindOptionsWhere"
+import { OrderByCondition } from "../find-options/OrderByCondition"
+import { ColumnMetadata } from "../metadata/ColumnMetadata"
+import { EntityMetadata } from "../metadata/EntityMetadata"
+import { RelationMetadata } from "../metadata/RelationMetadata"
+import { ReadStream } from "../platform/PlatformTools"
+import { QueryRunner } from "../query-runner/QueryRunner"
+import { ApplyValueTransformers } from "../util/ApplyValueTransformers"
+import { InstanceChecker } from "../util/InstanceChecker"
+import { ObjectUtils } from "../util/ObjectUtils"
+import { OrmUtils } from "../util/OrmUtils"
+import { Brackets } from "./Brackets"
 import { JoinAttribute } from "./JoinAttribute"
-import { RelationIdAttribute } from "./relation-id/RelationIdAttribute"
+import { QueryBuilder } from "./QueryBuilder"
+import { QueryExpressionMap } from "./QueryExpressionMap"
 import { RelationCountAttribute } from "./relation-count/RelationCountAttribute"
-import { RelationIdLoader } from "./relation-id/RelationIdLoader"
-import { RelationIdMetadataToAttributeTransformer } from "./relation-id/RelationIdMetadataToAttributeTransformer"
 import { RelationCountLoader } from "./relation-count/RelationCountLoader"
 import { RelationCountMetadataToAttributeTransformer } from "./relation-count/RelationCountMetadataToAttributeTransformer"
-import { QueryBuilder } from "./QueryBuilder"
-import { ReadStream } from "../platform/PlatformTools"
-import { LockNotSupportedOnGivenDriverError } from "../error/LockNotSupportedOnGivenDriverError"
-import { MysqlDriver } from "../driver/mysql/MysqlDriver"
+import { RelationIdAttribute } from "./relation-id/RelationIdAttribute"
+import { RelationIdLoader } from "./relation-id/RelationIdLoader"
+import { RelationIdMetadataToAttributeTransformer } from "./relation-id/RelationIdMetadataToAttributeTransformer"
 import { SelectQuery } from "./SelectQuery"
-import { EntityMetadata } from "../metadata/EntityMetadata"
-import { ColumnMetadata } from "../metadata/ColumnMetadata"
-import { OrderByCondition } from "../find-options/OrderByCondition"
-import { QueryExpressionMap } from "./QueryExpressionMap"
-import { EntityTarget } from "../common/EntityTarget"
-import { QueryRunner } from "../query-runner/QueryRunner"
-import { WhereExpressionBuilder } from "./WhereExpressionBuilder"
-import { Brackets } from "./Brackets"
-import { QueryResultCacheOptions } from "../cache/QueryResultCacheOptions"
-import { OffsetWithoutLimitNotSupportedError } from "../error/OffsetWithoutLimitNotSupportedError"
 import { SelectQueryBuilderOption } from "./SelectQueryBuilderOption"
-import { ObjectUtils } from "../util/ObjectUtils"
-import { DriverUtils } from "../driver/DriverUtils"
-import { EntityNotFoundError } from "../error/EntityNotFoundError"
-import { TypeORMError } from "../error"
-import { FindManyOptions } from "../find-options/FindManyOptions"
-import { FindOptionsSelect } from "../find-options/FindOptionsSelect"
-import { RelationMetadata } from "../metadata/RelationMetadata"
-import { FindOptionsOrder } from "../find-options/FindOptionsOrder"
-import { FindOptionsWhere } from "../find-options/FindOptionsWhere"
-import { FindOptionsUtils } from "../find-options/FindOptionsUtils"
-import { FindOptionsRelations } from "../find-options/FindOptionsRelations"
-import { ApplyValueTransformers } from "../util/ApplyValueTransformers"
-import { OrmUtils } from "../util/OrmUtils"
-import { EntityPropertyNotFoundError } from "../error/EntityPropertyNotFoundError"
-import { AuroraMysqlDriver } from "../driver/aurora-mysql/AuroraMysqlDriver"
-import { InstanceChecker } from "../util/InstanceChecker"
+import { RawSqlResultsToEntityTransformer } from "./transformer/RawSqlResultsToEntityTransformer"
+import { WhereExpressionBuilder } from "./WhereExpressionBuilder"
 
 /**
  * Allows to build complex sql queries in a fashion way and execute those queries.
@@ -2063,11 +2060,6 @@ export class SelectQueryBuilder<Entity extends ObjectLiteral>
 
         // Use certain index
         let useIndex: string = ""
-        if (this.expressionMap.useIndex) {
-            if (DriverUtils.isMySQLFamily(this.connection.driver)) {
-                useIndex = ` USE INDEX (${this.expressionMap.useIndex})`
-            }
-        }
 
         // create a selection query
         const froms = this.expressionMap.aliases
@@ -2112,28 +2104,11 @@ export class SelectQueryBuilder<Entity extends ObjectLiteral>
      * Creates select | select distinct part of SQL query.
      */
     protected createSelectDistinctExpression(): string {
-        const { selectDistinct, selectDistinctOn, maxExecutionTime } =
-            this.expressionMap
-        const { driver } = this.connection
+        const { selectDistinct } = this.expressionMap
 
         let select = "SELECT "
 
-        if (maxExecutionTime > 0) {
-            if (DriverUtils.isMySQLFamily(driver)) {
-                select += `/*+ MAX_EXECUTION_TIME(${this.expressionMap.maxExecutionTime}) */ `
-            }
-        }
-
-        if (
-            DriverUtils.isPostgresFamily(driver) &&
-            selectDistinctOn.length > 0
-        ) {
-            const selectDistinctOnMap = selectDistinctOn
-                .map((on) => this.replacePropertyNames(on))
-                .join(", ")
-
-            select = `SELECT DISTINCT ON (${selectDistinctOnMap}) `
-        } else if (selectDistinct) {
+        if (selectDistinct) {
             select = "SELECT DISTINCT "
         }
 
@@ -2419,63 +2394,9 @@ export class SelectQueryBuilder<Entity extends ObjectLiteral>
             limit = this.expressionMap.take
         }
 
-        if (this.connection.driver.options.type === "mssql") {
-            // Due to a limitation in SQL Server's parser implementation it does not support using
-            // OFFSET or FETCH NEXT without an ORDER BY clause being provided. In cases where the
-            // user does not request one we insert a dummy ORDER BY that does nothing and should
-            // have no effect on the query planner or on the order of the results returned.
-            // https://dba.stackexchange.com/a/193799
-            let prefix = ""
-            if (
-                (limit || offset) &&
-                Object.keys(this.expressionMap.allOrderBys).length <= 0
-            ) {
-                prefix = " ORDER BY (SELECT NULL)"
-            }
-
-            if (limit && offset)
-                return (
-                    prefix +
-                    " OFFSET " +
-                    offset +
-                    " ROWS FETCH NEXT " +
-                    limit +
-                    " ROWS ONLY"
-                )
-            if (limit)
-                return (
-                    prefix + " OFFSET 0 ROWS FETCH NEXT " + limit + " ROWS ONLY"
-                )
-            if (offset) return prefix + " OFFSET " + offset + " ROWS"
-        } else if (
-            DriverUtils.isMySQLFamily(this.connection.driver) ||
-            this.connection.driver.options.type === "aurora-mysql" ||
-            this.connection.driver.options.type === "sap" ||
-            this.connection.driver.options.type === "spanner"
-        ) {
-            if (limit && offset) return " LIMIT " + limit + " OFFSET " + offset
-            if (limit) return " LIMIT " + limit
-            if (offset) throw new OffsetWithoutLimitNotSupportedError()
-        } else if (DriverUtils.isSQLiteFamily(this.connection.driver)) {
-            if (limit && offset) return " LIMIT " + limit + " OFFSET " + offset
-            if (limit) return " LIMIT " + limit
-            if (offset) return " LIMIT -1 OFFSET " + offset
-        } else if (this.connection.driver.options.type === "oracle") {
-            if (limit && offset)
-                return (
-                    " OFFSET " +
-                    offset +
-                    " ROWS FETCH NEXT " +
-                    limit +
-                    " ROWS ONLY"
-                )
-            if (limit) return " FETCH NEXT " + limit + " ROWS ONLY"
-            if (offset) return " OFFSET " + offset + " ROWS"
-        } else {
-            if (limit && offset) return " LIMIT " + limit + " OFFSET " + offset
-            if (limit) return " LIMIT " + limit
-            if (offset) return " OFFSET " + offset
-        }
+        if (limit && offset) return " LIMIT " + limit + " OFFSET " + offset
+        if (limit) return " LIMIT " + limit
+        if (offset) return " LIMIT -1 OFFSET " + offset
 
         return ""
     }
@@ -2489,17 +2410,6 @@ export class SelectQueryBuilder<Entity extends ObjectLiteral>
      *      ON U.ID=O.OrderID
      */
     private createTableLockExpression(): string {
-        if (this.connection.driver.options.type === "mssql") {
-            switch (this.expressionMap.lockMode) {
-                case "pessimistic_read":
-                    return " WITH (HOLDLOCK, ROWLOCK)"
-                case "pessimistic_write":
-                    return " WITH (UPDLOCK, ROWLOCK)"
-                case "dirty_read":
-                    return " WITH (NOLOCK)"
-            }
-        }
-
         return ""
     }
 
@@ -2507,116 +2417,31 @@ export class SelectQueryBuilder<Entity extends ObjectLiteral>
      * Creates "LOCK" part of SQL query.
      */
     protected createLockExpression(): string {
-        const driver = this.connection.driver
-
-        let lockTablesClause = ""
-
         if (this.expressionMap.lockTables) {
-            if (
-                !(
-                    DriverUtils.isPostgresFamily(driver) ||
-                    driver.options.type === "cockroachdb"
-                )
-            ) {
-                throw new TypeORMError(
-                    "Lock tables not supported in selected driver",
-                )
-            }
-            if (this.expressionMap.lockTables.length < 1) {
-                throw new TypeORMError("lockTables cannot be an empty array")
-            }
-            lockTablesClause = " OF " + this.expressionMap.lockTables.join(", ")
+            throw new TypeORMError(
+                "Lock tables not supported in selected driver",
+            )
         }
 
-        let onLockExpression = ""
-        if (this.expressionMap.onLocked === "nowait") {
-            onLockExpression = " NOWAIT"
-        } else if (this.expressionMap.onLocked === "skip_locked") {
-            onLockExpression = " SKIP LOCKED"
-        }
         switch (this.expressionMap.lockMode) {
             case "pessimistic_read":
-                if (
-                    driver.options.type === "mysql" ||
-                    driver.options.type === "aurora-mysql"
-                ) {
-                    if (
-                        DriverUtils.isReleaseVersionOrGreater(driver, "8.0.0")
-                    ) {
-                        return (
-                            " FOR SHARE" + lockTablesClause + onLockExpression
-                        )
-                    } else {
-                        return " LOCK IN SHARE MODE"
-                    }
-                } else if (driver.options.type === "mariadb") {
-                    return " LOCK IN SHARE MODE"
-                } else if (DriverUtils.isPostgresFamily(driver)) {
-                    return " FOR SHARE" + lockTablesClause + onLockExpression
-                } else if (driver.options.type === "oracle") {
-                    return " FOR UPDATE"
-                } else if (driver.options.type === "mssql") {
-                    return ""
-                } else {
-                    throw new LockNotSupportedOnGivenDriverError()
-                }
+                throw new LockNotSupportedOnGivenDriverError()
+
             case "pessimistic_write":
-                if (
-                    DriverUtils.isMySQLFamily(driver) ||
-                    driver.options.type === "aurora-mysql" ||
-                    driver.options.type === "oracle"
-                ) {
-                    return " FOR UPDATE" + onLockExpression
-                } else if (
-                    DriverUtils.isPostgresFamily(driver) ||
-                    driver.options.type === "cockroachdb"
-                ) {
-                    return " FOR UPDATE" + lockTablesClause + onLockExpression
-                } else if (driver.options.type === "mssql") {
-                    return ""
-                } else {
-                    throw new LockNotSupportedOnGivenDriverError()
-                }
+                throw new LockNotSupportedOnGivenDriverError()
+
             case "pessimistic_partial_write":
-                if (DriverUtils.isPostgresFamily(driver)) {
-                    return " FOR UPDATE" + lockTablesClause + " SKIP LOCKED"
-                } else if (DriverUtils.isMySQLFamily(driver)) {
-                    return " FOR UPDATE SKIP LOCKED"
-                } else {
-                    throw new LockNotSupportedOnGivenDriverError()
-                }
+                throw new LockNotSupportedOnGivenDriverError()
+
             case "pessimistic_write_or_fail":
-                if (
-                    DriverUtils.isPostgresFamily(driver) ||
-                    driver.options.type === "cockroachdb"
-                ) {
-                    return " FOR UPDATE" + lockTablesClause + " NOWAIT"
-                } else if (DriverUtils.isMySQLFamily(driver)) {
-                    return " FOR UPDATE NOWAIT"
-                } else {
-                    throw new LockNotSupportedOnGivenDriverError()
-                }
+                throw new LockNotSupportedOnGivenDriverError()
+
             case "for_no_key_update":
-                if (
-                    DriverUtils.isPostgresFamily(driver) ||
-                    driver.options.type === "cockroachdb"
-                ) {
-                    return (
-                        " FOR NO KEY UPDATE" +
-                        lockTablesClause +
-                        onLockExpression
-                    )
-                } else {
-                    throw new LockNotSupportedOnGivenDriverError()
-                }
+                throw new LockNotSupportedOnGivenDriverError()
+
             case "for_key_share":
-                if (DriverUtils.isPostgresFamily(driver)) {
-                    return (
-                        " FOR KEY SHARE" + lockTablesClause + onLockExpression
-                    )
-                } else {
-                    throw new LockNotSupportedOnGivenDriverError()
-                }
+                throw new LockNotSupportedOnGivenDriverError()
+
             default:
                 return ""
         }
@@ -2701,33 +2526,6 @@ export class SelectQueryBuilder<Entity extends ObjectLiteral>
                 selectionPath = `(${column.query(escapedAliasName)})`
             }
 
-            if (
-                this.connection.driver.spatialTypes.indexOf(column.type) !== -1
-            ) {
-                if (
-                    DriverUtils.isMySQLFamily(this.connection.driver) ||
-                    this.connection.driver.options.type === "aurora-mysql"
-                ) {
-                    const useLegacy = (
-                        this.connection.driver as
-                            | MysqlDriver
-                            | AuroraMysqlDriver
-                    ).options.legacySpatialSupport
-                    const asText = useLegacy ? "AsText" : "ST_AsText"
-                    selectionPath = `${asText}(${selectionPath})`
-                }
-
-                if (DriverUtils.isPostgresFamily(this.connection.driver))
-                    if (column.precision) {
-                        // cast to JSON to trigger parsing in the driver
-                        selectionPath = `ST_AsGeoJSON(${selectionPath}, ${column.precision})::json`
-                    } else {
-                        selectionPath = `ST_AsGeoJSON(${selectionPath})::json`
-                    }
-                if (this.connection.driver.options.type === "mssql")
-                    selectionPath = `${selectionPath}.ToString()`
-            }
-
             const selections = this.expressionMap.selects.filter(
                 (select) =>
                     select.selection === aliasName + "." + column.propertyPath,
@@ -2795,84 +2593,6 @@ export class SelectQueryBuilder<Entity extends ObjectLiteral>
             this.expressionMap.relationCountAttributes.length === 0
         ) {
             return "COUNT(1)"
-        }
-
-        // For everything else, we'll need to do some hackery to get the correct count values.
-
-        if (
-            this.connection.driver.options.type === "cockroachdb" ||
-            DriverUtils.isPostgresFamily(this.connection.driver)
-        ) {
-            // Postgres and CockroachDB can pass multiple parameters to the `DISTINCT` function
-            // https://www.postgresql.org/docs/9.5/sql-select.html#SQL-DISTINCT
-            return (
-                "COUNT(DISTINCT(" +
-                primaryColumns
-                    .map(
-                        (c) =>
-                            `${distinctAlias}.${this.escape(c.databaseName)}`,
-                    )
-                    .join(", ") +
-                "))"
-            )
-        }
-
-        if (DriverUtils.isMySQLFamily(this.connection.driver)) {
-            // MySQL & MariaDB can pass multiple parameters to the `DISTINCT` language construct
-            // https://mariadb.com/kb/en/count-distinct/
-            return (
-                "COUNT(DISTINCT " +
-                primaryColumns
-                    .map(
-                        (c) =>
-                            `${distinctAlias}.${this.escape(c.databaseName)}`,
-                    )
-                    .join(", ") +
-                ")"
-            )
-        }
-
-        if (this.connection.driver.options.type === "mssql") {
-            // SQL Server has gotta be different from everyone else.  They don't support
-            // distinct counting multiple columns & they don't have the same operator
-            // characteristic for concatenating, so we gotta use the `CONCAT` function.
-            // However, If it's exactly 1 column we can omit the `CONCAT` for better performance.
-
-            const columnsExpression = primaryColumns
-                .map(
-                    (primaryColumn) =>
-                        `${distinctAlias}.${this.escape(
-                            primaryColumn.databaseName,
-                        )}`,
-                )
-                .join(", '|;|', ")
-
-            if (primaryColumns.length === 1) {
-                return `COUNT(DISTINCT(${columnsExpression}))`
-            }
-
-            return `COUNT(DISTINCT(CONCAT(${columnsExpression})))`
-        }
-
-        if (this.connection.driver.options.type === "spanner") {
-            // spanner also has gotta be different from everyone else.
-            // they do not support concatenation of different column types without casting them to string
-
-            if (primaryColumns.length === 1) {
-                return `COUNT(DISTINCT(${distinctAlias}.${this.escape(
-                    primaryColumns[0].databaseName,
-                )}))`
-            }
-
-            const columnsExpression = primaryColumns
-                .map(
-                    (primaryColumn) =>
-                        `CAST(${distinctAlias}.${this.escape(
-                            primaryColumn.databaseName,
-                        )} AS STRING)`,
-                )
-                .join(", '|;|', ")
-            return `COUNT(DISTINCT(CONCAT(${columnsExpression})))`
         }
 
         // If all else fails, fall back to a `COUNT` and `DISTINCT` across all the primary columns concatenated.

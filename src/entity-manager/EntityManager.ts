@@ -1,41 +1,40 @@
-import { DataSource } from "../data-source/DataSource"
-import { FindManyOptions } from "../find-options/FindManyOptions"
-import { EntityTarget } from "../common/EntityTarget"
-import { ObjectType } from "../common/ObjectType"
-import { EntityNotFoundError } from "../error/EntityNotFoundError"
-import { QueryRunnerProviderAlreadyReleasedError } from "../error/QueryRunnerProviderAlreadyReleasedError"
-import { FindOneOptions } from "../find-options/FindOneOptions"
 import { DeepPartial } from "../common/DeepPartial"
-import { RemoveOptions } from "../repository/RemoveOptions"
-import { SaveOptions } from "../repository/SaveOptions"
-import { NoNeedToReleaseEntityManagerError } from "../error/NoNeedToReleaseEntityManagerError"
-import { MongoRepository } from "../repository/MongoRepository"
-import { TreeRepository } from "../repository/TreeRepository"
-import { Repository } from "../repository/Repository"
-import { FindOptionsUtils } from "../find-options/FindOptionsUtils"
-import { PlainObjectToNewEntityTransformer } from "../query-builder/transformer/PlainObjectToNewEntityTransformer"
-import { PlainObjectToDatabaseEntityTransformer } from "../query-builder/transformer/PlainObjectToDatabaseEntityTransformer"
+import { EntityTarget } from "../common/EntityTarget"
+import { ObjectLiteral } from "../common/ObjectLiteral"
+import { ObjectType } from "../common/ObjectType"
+import { DataSource } from "../data-source/DataSource"
+import { IsolationLevel } from "../driver/types/IsolationLevel"
 import {
     CustomRepositoryCannotInheritRepositoryError,
     CustomRepositoryNotFoundError,
     TreeRepositoryNotSupportedError,
     TypeORMError,
 } from "../error"
-import { AbstractRepository } from "../repository/AbstractRepository"
-import { QueryRunner } from "../query-runner/QueryRunner"
-import { SelectQueryBuilder } from "../query-builder/SelectQueryBuilder"
-import { QueryDeepPartialEntity } from "../query-builder/QueryPartialEntity"
+import { EntityNotFoundError } from "../error/EntityNotFoundError"
+import { NoNeedToReleaseEntityManagerError } from "../error/NoNeedToReleaseEntityManagerError"
+import { QueryRunnerProviderAlreadyReleasedError } from "../error/QueryRunnerProviderAlreadyReleasedError"
+import { FindManyOptions } from "../find-options/FindManyOptions"
+import { FindOneOptions } from "../find-options/FindOneOptions"
+import { FindOptionsUtils } from "../find-options/FindOptionsUtils"
+import { FindOptionsWhere } from "../find-options/FindOptionsWhere"
+import { getMetadataArgsStorage } from "../globals"
 import { EntityPersistExecutor } from "../persistence/EntityPersistExecutor"
+import { QueryDeepPartialEntity } from "../query-builder/QueryPartialEntity"
+import { DeleteResult } from "../query-builder/result/DeleteResult"
 import { InsertResult } from "../query-builder/result/InsertResult"
 import { UpdateResult } from "../query-builder/result/UpdateResult"
-import { DeleteResult } from "../query-builder/result/DeleteResult"
-import { FindOptionsWhere } from "../find-options/FindOptionsWhere"
-import { IsolationLevel } from "../driver/types/IsolationLevel"
-import { ObjectUtils } from "../util/ObjectUtils"
-import { getMetadataArgsStorage } from "../globals"
+import { SelectQueryBuilder } from "../query-builder/SelectQueryBuilder"
+import { PlainObjectToDatabaseEntityTransformer } from "../query-builder/transformer/PlainObjectToDatabaseEntityTransformer"
+import { PlainObjectToNewEntityTransformer } from "../query-builder/transformer/PlainObjectToNewEntityTransformer"
+import { QueryRunner } from "../query-runner/QueryRunner"
+import { AbstractRepository } from "../repository/AbstractRepository"
+import { RemoveOptions } from "../repository/RemoveOptions"
+import { Repository } from "../repository/Repository"
+import { SaveOptions } from "../repository/SaveOptions"
+import { TreeRepository } from "../repository/TreeRepository"
 import { UpsertOptions } from "../repository/UpsertOptions"
 import { InstanceChecker } from "../util/InstanceChecker"
-import { ObjectLiteral } from "../common/ObjectLiteral"
+import { ObjectUtils } from "../util/ObjectUtils"
 
 /**
  * Entity manager supposed to work with any entity, automatically find its repository and call its methods,
@@ -737,14 +736,7 @@ export class EntityManager {
      */
     update<Entity extends ObjectLiteral>(
         target: EntityTarget<Entity>,
-        criteria:
-            | string
-            | string[]
-            | number
-            | number[]
-            | Date
-            | Date[]
-            | any,
+        criteria: string | string[] | number | number[] | Date | Date[] | any,
         partialEntity: QueryDeepPartialEntity<Entity>,
     ): Promise<UpdateResult> {
         // if user passed empty criteria or empty list of criterias, then throw an error
@@ -790,14 +782,7 @@ export class EntityManager {
      */
     delete<Entity extends ObjectLiteral>(
         targetOrEntity: EntityTarget<Entity>,
-        criteria:
-            | string
-            | string[]
-            | number
-            | number[]
-            | Date
-            | Date[]
-            | any,
+        criteria: string | string[] | number | number[] | Date | Date[] | any,
     ): Promise<DeleteResult> {
         // if user passed empty criteria or empty list of criterias, then throw an error
         if (
@@ -842,14 +827,7 @@ export class EntityManager {
      */
     softDelete<Entity extends ObjectLiteral>(
         targetOrEntity: EntityTarget<Entity>,
-        criteria:
-            | string
-            | string[]
-            | number
-            | number[]
-            | Date
-            | Date[]
-            | any,
+        criteria: string | string[] | number | number[] | Date | Date[] | any,
     ): Promise<UpdateResult> {
         // if user passed empty criteria or empty list of criterias, then throw an error
         if (
@@ -894,14 +872,7 @@ export class EntityManager {
      */
     restore<Entity extends ObjectLiteral>(
         targetOrEntity: EntityTarget<Entity>,
-        criteria:
-            | string
-            | string[]
-            | number
-            | number[]
-            | Date
-            | Date[]
-            | any,
+        criteria: string | string[] | number | number[] | Date | Date[] | any,
     ): Promise<UpdateResult> {
         // if user passed empty criteria or empty list of criterias, then throw an error
         if (
@@ -1287,23 +1258,14 @@ export class EntityManager {
         if (repository) return repository
 
         // if repository was not found then create it, store its instance and return it
-        if (this.connection.driver.options.type === "mongodb") {
-            const newRepository = new MongoRepository(
-                target,
-                this,
-                this.queryRunner,
-            )
-            this.repositories.push(newRepository as any)
-            return newRepository
-        } else {
-            const newRepository = new Repository<any>(
-                target,
-                this,
-                this.queryRunner,
-            )
-            this.repositories.push(newRepository)
-            return newRepository
-        }
+
+        const newRepository = new Repository<any>(
+            target,
+            this,
+            this.queryRunner,
+        )
+        this.repositories.push(newRepository)
+        return newRepository
     }
 
     /**
@@ -1329,15 +1291,6 @@ export class EntityManager {
         const newRepository = new TreeRepository(target, this, this.queryRunner)
         this.treeRepositories.push(newRepository)
         return newRepository
-    }
-
-    /**
-     * Gets mongodb repository for the given entity class.
-     */
-    getMongoRepository<Entity extends ObjectLiteral>(
-        target: EntityTarget<Entity>,
-    ): MongoRepository<Entity> {
-        return this.connection.getMongoRepository<Entity>(target)
     }
 
     /**

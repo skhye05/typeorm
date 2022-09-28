@@ -1,30 +1,29 @@
-import { ObjectLiteral } from "../common/ObjectLiteral"
-import { QueryRunner } from "../query-runner/QueryRunner"
-import { DataSource } from "../data-source/DataSource"
-import { QueryBuilderCteOptions } from "./QueryBuilderCte"
-import { QueryExpressionMap } from "./QueryExpressionMap"
-import { SelectQueryBuilder } from "./SelectQueryBuilder"
-import { UpdateQueryBuilder } from "./UpdateQueryBuilder"
-import { DeleteQueryBuilder } from "./DeleteQueryBuilder"
-import { SoftDeleteQueryBuilder } from "./SoftDeleteQueryBuilder"
-import { InsertQueryBuilder } from "./InsertQueryBuilder"
-import { RelationQueryBuilder } from "./RelationQueryBuilder"
 import { EntityTarget } from "../common/EntityTarget"
-import { Alias } from "./Alias"
-import { Brackets } from "./Brackets"
-import { QueryDeepPartialEntity } from "./QueryPartialEntity"
-import { EntityMetadata } from "../metadata/EntityMetadata"
-import { ColumnMetadata } from "../metadata/ColumnMetadata"
+import { ObjectLiteral } from "../common/ObjectLiteral"
+import { DataSource } from "../data-source/DataSource"
+import { ReturningType } from "../driver/Driver"
+import { TypeORMError } from "../error"
+import { EntityPropertyNotFoundError } from "../error/EntityPropertyNotFoundError"
 import { FindOperator } from "../find-options/FindOperator"
 import { In } from "../find-options/operator/In"
-import { TypeORMError } from "../error"
-import { WhereClause, WhereClauseCondition } from "./WhereClause"
-import { NotBrackets } from "./NotBrackets"
-import { EntityPropertyNotFoundError } from "../error/EntityPropertyNotFoundError"
-import { ReturningType } from "../driver/Driver"
-import { OracleDriver } from "../driver/oracle/OracleDriver"
-import { InstanceChecker } from "../util/InstanceChecker"
+import { ColumnMetadata } from "../metadata/ColumnMetadata"
+import { EntityMetadata } from "../metadata/EntityMetadata"
+import { QueryRunner } from "../query-runner/QueryRunner"
 import { escapeRegExp } from "../util/escapeRegExp"
+import { InstanceChecker } from "../util/InstanceChecker"
+import { Alias } from "./Alias"
+import { Brackets } from "./Brackets"
+import { DeleteQueryBuilder } from "./DeleteQueryBuilder"
+import { InsertQueryBuilder } from "./InsertQueryBuilder"
+import { NotBrackets } from "./NotBrackets"
+import { QueryBuilderCteOptions } from "./QueryBuilderCte"
+import { QueryExpressionMap } from "./QueryExpressionMap"
+import { QueryDeepPartialEntity } from "./QueryPartialEntity"
+import { RelationQueryBuilder } from "./RelationQueryBuilder"
+import { SelectQueryBuilder } from "./SelectQueryBuilder"
+import { SoftDeleteQueryBuilder } from "./SoftDeleteQueryBuilder"
+import { UpdateQueryBuilder } from "./UpdateQueryBuilder"
+import { WhereClause, WhereClauseCondition } from "./WhereClause"
 
 // todo: completely cover query builder with tests
 // todo: entityOrProperty can be target name. implement proper behaviour if it is.
@@ -882,50 +881,9 @@ export abstract class QueryBuilder<Entity extends ObjectLiteral> {
             let columnsExpression = columns
                 .map((column) => {
                     const name = this.escape(column.databaseName)
-                    if (driver.options.type === "mssql") {
-                        if (
-                            this.expressionMap.queryType === "insert" ||
-                            this.expressionMap.queryType === "update" ||
-                            this.expressionMap.queryType === "soft-delete" ||
-                            this.expressionMap.queryType === "restore"
-                        ) {
-                            return "INSERTED." + name
-                        } else {
-                            return (
-                                this.escape(this.getMainTableName()) +
-                                "." +
-                                name
-                            )
-                        }
-                    } else {
-                        return name
-                    }
+                    return name
                 })
                 .join(", ")
-
-            if (driver.options.type === "oracle") {
-                columnsExpression +=
-                    " INTO " +
-                    columns
-                        .map((column) => {
-                            return this.createParameter({
-                                type: (
-                                    driver as OracleDriver
-                                ).columnTypeToNativeParameter(column.type),
-                                dir: (driver as OracleDriver).oracle.BIND_OUT,
-                            })
-                        })
-                        .join(", ")
-            }
-
-            if (driver.options.type === "mssql") {
-                if (
-                    this.expressionMap.queryType === "insert" ||
-                    this.expressionMap.queryType === "update"
-                ) {
-                    columnsExpression += " INTO @OutputTable"
-                }
-            }
 
             return columnsExpression
         } else if (typeof this.expressionMap.returning === "string") {
@@ -1000,8 +958,6 @@ export abstract class QueryBuilder<Entity extends ObjectLiteral> {
             return "(" + this.createWhereClausesExpression(condition) + ")"
         }
 
-        const { driver } = this.connection
-
         switch (condition.operator) {
             case "lessThan":
                 return `${condition.parameters[0]} < ${condition.parameters[1]}`
@@ -1022,13 +978,6 @@ export abstract class QueryBuilder<Entity extends ObjectLiteral> {
             case "equal":
                 return `${condition.parameters[0]} = ${condition.parameters[1]}`
             case "ilike":
-                if (
-                    driver.options.type === "postgres" ||
-                    driver.options.type === "cockroachdb"
-                ) {
-                    return `${condition.parameters[0]} ILIKE ${condition.parameters[1]}`
-                }
-
                 return `UPPER(${condition.parameters[0]}) LIKE UPPER(${condition.parameters[1]})`
             case "like":
                 return `${condition.parameters[0]} LIKE ${condition.parameters[1]}`

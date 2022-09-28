@@ -1,21 +1,19 @@
-import { PostgresConnectionOptions } from "../driver/postgres/PostgresConnectionOptions"
+import { DataSource } from "../data-source/DataSource"
 import { Query } from "../driver/Query"
 import { SqlInMemory } from "../driver/SqlInMemory"
-import { SqlServerConnectionOptions } from "../driver/sqlserver/SqlServerConnectionOptions"
-import { TableIndex } from "../schema-builder/table/TableIndex"
-import { View } from "../schema-builder/view/View"
-import { DataSource } from "../data-source/DataSource"
-import { Table } from "../schema-builder/table/Table"
-import { EntityManager } from "../entity-manager/EntityManager"
-import { TableColumn } from "../schema-builder/table/TableColumn"
-import { Broadcaster } from "../subscriber/Broadcaster"
+import { MetadataTableType } from "../driver/types/MetadataTableType"
 import { ReplicationMode } from "../driver/types/ReplicationMode"
+import { EntityManager } from "../entity-manager/EntityManager"
 import { TypeORMError } from "../error/TypeORMError"
 import { EntityMetadata } from "../metadata/EntityMetadata"
+import { Table } from "../schema-builder/table/Table"
+import { TableColumn } from "../schema-builder/table/TableColumn"
 import { TableForeignKey } from "../schema-builder/table/TableForeignKey"
-import { OrmUtils } from "../util/OrmUtils"
-import { MetadataTableType } from "../driver/types/MetadataTableType"
+import { TableIndex } from "../schema-builder/table/TableIndex"
+import { View } from "../schema-builder/view/View"
+import { Broadcaster } from "../subscriber/Broadcaster"
 import { InstanceChecker } from "../util/InstanceChecker"
+import { OrmUtils } from "../util/OrmUtils"
 
 export abstract class BaseQueryRunner {
     // -------------------------------------------------------------------------
@@ -336,9 +334,7 @@ export abstract class BaseQueryRunner {
     }
 
     protected getTypeormMetadataTableName(): string {
-        const options = <
-            SqlServerConnectionOptions | PostgresConnectionOptions
-        >this.connection.driver.options
+        const options = <any>this.connection.driver.options
         return this.connection.driver.buildTableName(
             this.connection.metadataTableName,
             options.schema,

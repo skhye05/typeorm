@@ -1,13 +1,10 @@
 import appRootPath from "app-root-path"
 import path from "path"
 import { DataSourceOptions } from "../data-source/DataSourceOptions"
-import { PlatformTools } from "../platform/PlatformTools"
-import { ConnectionOptionsEnvReader } from "./options-reader/ConnectionOptionsEnvReader"
-import { ConnectionOptionsYmlReader } from "./options-reader/ConnectionOptionsYmlReader"
-import { ConnectionOptionsXmlReader } from "./options-reader/ConnectionOptionsXmlReader"
 import { TypeORMError } from "../error"
-import { isAbsolute } from "../util/PathUtils"
+import { PlatformTools } from "../platform/PlatformTools"
 import { importOrRequireFile } from "../util/ImportUtils"
+import { isAbsolute } from "../util/PathUtils"
 
 /**
  * Reads connection options from the ormconfig.
@@ -138,13 +135,7 @@ export class ConnectionOptionsReader {
             PlatformTools.dotenv(this.baseDirectory + "/.env")
         }
 
-        // try to find connection options from any of available sources of configuration
         if (
-            PlatformTools.getEnvVariable("TYPEORM_CONNECTION") ||
-            PlatformTools.getEnvVariable("TYPEORM_URL")
-        ) {
-            connectionOptions = await new ConnectionOptionsEnvReader().read()
-        } else if (
             foundFileFormat === "js" ||
             foundFileFormat === "mjs" ||
             foundFileFormat === "cjs" ||
@@ -168,18 +159,6 @@ export class ConnectionOptionsReader {
             }
         } else if (foundFileFormat === "json") {
             connectionOptions = require(configFile)
-        } else if (foundFileFormat === "yml") {
-            connectionOptions = await new ConnectionOptionsYmlReader().read(
-                configFile,
-            )
-        } else if (foundFileFormat === "yaml") {
-            connectionOptions = await new ConnectionOptionsYmlReader().read(
-                configFile,
-            )
-        } else if (foundFileFormat === "xml") {
-            connectionOptions = await new ConnectionOptionsXmlReader().read(
-                configFile,
-            )
         }
 
         // normalize and return connection options
@@ -199,7 +178,7 @@ export class ConnectionOptionsReader {
         if (!Array.isArray(connectionOptions))
             connectionOptions = [connectionOptions]
 
-        connectionOptions.forEach((options) => {
+        connectionOptions.forEach((options: any) => {
             options.baseDirectory = this.baseDirectory
             if (options.entities) {
                 const entities = (options.entities as any[]).map((entity) => {
