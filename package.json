@@ -43,15 +43,6 @@
     "./browser/connection/ConnectionOptionsReader.js": "./browser/platform/BrowserConnectionOptionsReaderDummy.js",
     "./browser/connection/options-reader/ConnectionOptionsXmlReader.js": "./browser/platform/BrowserConnectionOptionsReaderDummy.js",
     "./browser/connection/options-reader/ConnectionOptionsYmlReader.js": "./browser/platform/BrowserConnectionOptionsReaderDummy.js",
-    "./browser/driver/aurora-data-api/AuroraDataApiDriver.js": "./browser/platform/BrowserDisabledDriversDummy.js",
-    "./browser/driver/better-sqlite3/BetterSqlite3Driver.js": "./browser/platform/BrowserDisabledDriversDummy.js",
-    "./browser/driver/cockroachdb/CockroachDriver.js": "./browser/platform/BrowserDisabledDriversDummy.js",
-    "./browser/driver/mongodb/MongoDriver.js": "./browser/platform/BrowserDisabledDriversDummy.js",
-    "./browser/driver/mongodb/MongoQueryRunner.js": "./browser/platform/BrowserDisabledDriversDummy.js",
-    "./browser/driver/mysql/MysqlDriver.js": "./browser/platform/BrowserDisabledDriversDummy.js",
-    "./browser/driver/oracle/OracleDriver.js": "./browser/platform/BrowserDisabledDriversDummy.js",
-    "./browser/driver/postgres/PostgresDriver.js": "./browser/platform/BrowserDisabledDriversDummy.js",
-    "./browser/driver/sap/SapDriver.js": "./browser/platform/BrowserDisabledDriversDummy.js",
     "./browser/driver/sqlite/SqliteDriver.js": "./browser/platform/BrowserDisabledDriversDummy.js",
     "./browser/driver/sqlserver/SqlServerDriver.js": "./browser/platform/BrowserDisabledDriversDummy.js",
     "./browser/entity-manager/MongoEntityManager.js": "./browser/platform/BrowserDisabledDriversDummy.js",
@@ -71,24 +62,8 @@
   },
   "homepage": "https://typeorm.io",
   "tags": [
-    "orm",
     "typescript",
-    "typescript-orm",
-    "mysql",
-    "mysql-orm",
-    "postgresql",
-    "postgresql-orm",
-    "mariadb",
-    "mariadb-orm",
-    "spanner",
-    "sqlite",
-    "sqlite-orm",
-    "sql-server",
-    "sql-server-orm",
-    "oracle",
-    "oracle-orm",
-    "cloud-spanner",
-    "cloud-spanner-orm"
+    "typescript-orm"
   ],
   "devDependencies": {
     "@types/app-root-path": "^1.2.4",
@@ -124,12 +99,6 @@
     "gulpclass": "^0.2.0",
     "husky": "^5.1.1",
     "mocha": "^8.3.0",
-    "mongodb": "^3.6.4",
-    "mssql": "^7.3.0",
-    "mysql": "^2.18.1",
-    "mysql2": "^2.2.5",
-    "pg": "^8.5.1",
-    "pg-query-stream": "^4.0.0",
     "prettier": "^2.5.1",
     "redis": "^3.1.1",
     "remap-istanbul": "^0.13.0",
@@ -137,87 +106,11 @@
     "sinon": "^9.2.4",
     "sinon-chai": "^3.5.0",
     "source-map-support": "^0.5.19",
-    "sql.js": "^1.4.0",
     "sqlite3": "^5.0.11",
-    "ts-node": "^10.7.0",
-    "typeorm-aurora-data-api-driver": "^2.0.0",
     "typescript": "^4.8.2"
-  },
-  "peerDependencies": {
-    "@google-cloud/spanner": "^5.18.0",
-    "@sap/hana-client": "^2.12.25",
-    "better-sqlite3": "^7.1.2",
-    "hdb-pool": "^0.1.6",
-    "ioredis": "^5.0.4",
-    "mongodb": "^3.6.0",
-    "mssql": "^7.3.0",
-    "mysql2": "^2.2.5",
-    "oracledb": "^5.1.0",
-    "pg": "^8.5.1",
-    "pg-native": "^3.0.0",
-    "pg-query-stream": "^4.0.0",
-    "redis": "^3.1.1 || ^4.0.0",
-    "sql.js": "^1.4.0",
-    "sqlite3": "^5.0.3",
-    "ts-node": "^10.7.0",
-    "typeorm-aurora-data-api-driver": "^2.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@google-cloud/spanner": {
-      "optional": true
-    },
-    "@sap/hana-client": {
-      "optional": true
-    },
-    "better-sqlite3": {
-      "optional": true
-    },
-    "hdb-pool": {
-      "optional": true
-    },
-    "ioredis": {
-      "optional": true
-    },
-    "mongodb": {
-      "optional": true
-    },
-    "mssql": {
-      "optional": true
-    },
-    "mysql2": {
-      "optional": true
-    },
-    "oracledb": {
-      "optional": true
-    },
-    "pg": {
-      "optional": true
-    },
-    "pg-native": {
-      "optional": true
-    },
-    "pg-query-stream": {
-      "optional": true
-    },
-    "redis": {
-      "optional": true
-    },
-    "sql.js": {
-      "optional": true
-    },
-    "sqlite3": {
-      "optional": true
-    },
-    "ts-node": {
-      "optional": true
-    },
-    "typeorm-aurora-data-api-driver": {
-      "optional": true
-    }
   },
   "dependencies": {
     "@sqltools/formatter": "^1.2.2",
-    "app-root-path": "^3.0.0",
     "buffer": "^6.0.3",
     "chalk": "^4.1.0",
     "cli-highlight": "^2.1.11",

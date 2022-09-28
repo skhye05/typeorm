@@ -26,7 +26,6 @@ import { QueryRunner } from "../query-runner/QueryRunner"
 import { SelectQueryBuilder } from "../query-builder/SelectQueryBuilder"
 import { QueryDeepPartialEntity } from "../query-builder/QueryPartialEntity"
 import { EntityPersistExecutor } from "../persistence/EntityPersistExecutor"
-import { ObjectID } from "../driver/mongodb/typings"
 import { InsertResult } from "../query-builder/result/InsertResult"
 import { UpdateResult } from "../query-builder/result/UpdateResult"
 import { DeleteResult } from "../query-builder/result/DeleteResult"
@@ -745,8 +744,6 @@ export class EntityManager {
             | number[]
             | Date
             | Date[]
-            | ObjectID
-            | ObjectID[]
             | any,
         partialEntity: QueryDeepPartialEntity<Entity>,
     ): Promise<UpdateResult> {
@@ -800,8 +797,6 @@ export class EntityManager {
             | number[]
             | Date
             | Date[]
-            | ObjectID
-            | ObjectID[]
             | any,
     ): Promise<DeleteResult> {
         // if user passed empty criteria or empty list of criterias, then throw an error
@@ -854,8 +849,6 @@ export class EntityManager {
             | number[]
             | Date
             | Date[]
-            | ObjectID
-            | ObjectID[]
             | any,
     ): Promise<UpdateResult> {
         // if user passed empty criteria or empty list of criterias, then throw an error
@@ -908,8 +901,6 @@ export class EntityManager {
             | number[]
             | Date
             | Date[]
-            | ObjectID
-            | ObjectID[]
             | any,
     ): Promise<UpdateResult> {
         // if user passed empty criteria or empty list of criterias, then throw an error
@@ -1136,7 +1127,7 @@ export class EntityManager {
      */
     async findOneById<Entity extends ObjectLiteral>(
         entityClass: EntityTarget<Entity>,
-        id: number | string | Date | ObjectID,
+        id: number | string | Date,
     ): Promise<Entity | null> {
         const metadata = this.connection.getMetadata(entityClass)
 
